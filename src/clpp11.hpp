@@ -37,6 +37,7 @@
 #define CLBLAST_CLPP11_H_
 
 // C++
+#include <functional>// std::function
 #include <algorithm> // std::copy
 #include <string>    // std::string
 #include <vector>    // std::vector
@@ -75,9 +76,17 @@ class CLCudaAPIError : public ErrorCode<DeviceError, cl_int> {
                                    std::to_string(static_cast<int>(status))) {
   }
 
-  static void Check(const cl_int status, const std::string &where) {
+  // Check status
+  static void Check(const cl_int status, const char* where) {
     if (status != CL_SUCCESS) {
       throw CLCudaAPIError(status, where);
+    }
+  }
+
+  // Check status, evaluating where_producer only for bad ones
+  static void Check(const cl_int status, const std::function<std::string()> where_producer) {
+    if (status != CL_SUCCESS) {
+      throw CLCudaAPIError(status, where_producer());
     }
   }
 
@@ -94,7 +103,7 @@ using CLCudaAPIBuildError = CLCudaAPIError;
 // =================================================================================================
 
 // Error occurred in OpenCL
-#define CheckError(call) CLCudaAPIError::Check(call, CLCudaAPIError::TrimCallString(#call))
+#define CheckError(call) CLCudaAPIError::Check(call, []() { return CLCudaAPIError::TrimCallString(#call); })
 
 // Error occurred in OpenCL (no-exception version for destructors)
 #define CheckErrorDtor(call) CLCudaAPIError::CheckDtor(call, CLCudaAPIError::TrimCallString(#call))
